@@ -5,7 +5,7 @@
 // WWW.ITROS.NET
 //////////////////////////////
 
-error_reporting(E_ALL);
+//error_reporting(E_ALL);
 
 function generateRandomString($length = 10) {
     $characters = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ';
@@ -30,32 +30,53 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 // Handle POST Request
 
 	$uploaddir = getcwd().'/images/';
-	$rnd = generateRandomString();
-	$uploadfile = $uploaddir . $rnd . '.png';
+	if (!file_exists($uploaddir)) {
+	    mkdir($uploaddir, 0775, true);
+	}
 
-	$data = $_POST['imgtosave']; 
-	$image = explode('base64,',$data); 
-	if (file_put_contents($uploadfile, base64_decode($image[1]))) {
-	  echo str_replace("fbshare.php", "", "http://$_SERVER[HTTP_HOST]$_SERVER[REQUEST_URI]")."images/$rnd.png";
+	$data = default_value($_POST,"imgtosave","NOTDEF");
+	
+	if ( $data === "NOTDEF" ) {
+		$data = default_value($_POST,"imgtoremove","NOTDEF");
+		if ( $data === "NOTDEF" ) {
+			echo "";
+		} else {
+			$link_array = explode('/',$data);
+    		$fdata = end($link_array);
+			if(unlink($uploaddir . $fdata)){
+				//echo "Deleted " . $fdata;
+				echo "";
+			} else {
+				echo "-1";
+			}
+		}
 	} else {
-	   echo "-1";
+		$rnd = generateRandomString();
+		$uploadfile = $uploaddir . $rnd . '.png';
+		$image = explode('base64,',$data); 
+		if (file_put_contents($uploadfile, base64_decode($image[1]))) {
+		  echo str_replace("fbshare.php", "", "http://$_SERVER[HTTP_HOST]$_SERVER[REQUEST_URI]")."images/$rnd.png";
+		} else {
+		   echo "-1";
+		}
 	}
 } else {
 // Handle GET Request
-	$id = default_value($_GET,"id","NOTDEF");
 	$js = default_value($_GET,"js","NOTDEF");
 	$appid = default_value($_GET,"appid","NOTDEF");
 	
 	if ($js === "") {
 		header('Content-type: text/javascript');
-		if ($appid === "NOTDEF") {
-?>			console.error("FBShare error: missing Facebook APP ip, pass it with 'passid'"); <?php
+		
+		if ($appid === "") {
+?>			log("FBShare error config: edit the appropiate configuration values."); <?php
 		}
 ?>
+/*
 var script = document.createElement('script');
 script.src = "base64min.js";
 document.getElementsByTagName('script')[0].parentNode.appendChild(script);
-
+*/
 window.fbAsyncInit = function() {
     FB.init({
       appId      : '<?php echo $appid; ?>',
@@ -63,108 +84,92 @@ window.fbAsyncInit = function() {
       version    : 'v2.7'
     });
   };
-  
 (function(d, s, id){
 var js, fjs = d.getElementsByTagName(s)[0];
 if (d.getElementById(id)) {return;}
 js = d.createElement(s); js.id = id;
-js.src = "//connect.facebook.net/en_US/sdk.js";
+js.src = "//connect.facebook.net/es_LA/sdk.js";
 fjs.parentNode.insertBefore(js, fjs);
 }(document, 'script', 'facebook-jssdk'));
 
-function base64ToBlob(base64, mime) 
-{
-    mime = mime || '';
-    var sliceSize = 1024;
-    var byteChars = Base64.decode(base64);
-    var byteArrays = [];
-
-    for (var offset = 0, len = byteChars.length; offset < len; offset += sliceSize) {
-        var slice = byteChars.slice(offset, offset + sliceSize);
-
-        var byteNumbers = new Array(slice.length);
-        for (var i = 0; i < slice.length; i++) {
-            byteNumbers[i] = slice.charCodeAt(i);
-        }
-
-        var byteArray = new Uint8Array(byteNumbers);
-
-        byteArrays.push(byteArray);
-    }
-
-    return new Blob(byteArrays, {type: mime});
+function log(t){
+	if ( debug ) {
+		console.log(t);
+	}
 }
 
-function shareImage(i){
-
-	$.ajax({
-		url: 'fbshare.php', 
-		type: "POST",
-		datatype: 'text',
-		data: {
-		        imgtosave : i
-		    }
-	})
-	.done(function(e){
-		if ( e === "-1" ) { 
-			console.error("fbshare: oooops, something happened uploading the image");
+function fbPost(m,i,s){
+	FB.api('/me/photos', 'post', {
+		message:m,
+		url:i        
+	}, 
+	function(response){
+		if (!response || response.error) {
+			log('FBShare: Error sharing, ' + response.error.message);
+			s({ result : 'error', msg : 'FBShare: Error sharing, ' + response.error.message });
 		} else {
-			var imgURL=e;
-			FB.getLoginStatus(function(response) {
-			  if (response.status === 'connected') {
-			    FB.api('/me/photos', 'post', {
-				message:'Aqui logrando logros si',
-				url:imgURL        
-				}, function(response){
-				if (!response || response.error) {
-				console.error('FB error: ' + response.error.message);
-				} else {
-				console.log('Post ID: ' + response.id);
-				alert("Se ha compartido el grafico en FB");
-				}
-				});
-			  }
-			  else {
-			    FB.login(function(){}, {scope: 'publish_actions'});
-			  }
+			log('FBShare: Post done, ID#' + response.id);
+			s({ result : 'success', msg : 'FBShare: Post done, ID#' + response.id });
+			$.ajax(
+			{
+				url: 'fbshare.php', 
+				type: 'POST',
+				datatype: 'text',
+				data: { imgtoremove : i }
+			})
+			.done(function(e){
+					if ( e === "-1" ) { 
+						log("FBShare error: something wrong happened deleting the temp image.");
+					} else {
+						log("FBShare: temporary image removed, " + e);
+					}
 			});
 		}
 	});
 }
 
-function chartSetup(c,d,t){
-	if (t === undefined) {
-		t = '<a href="#" class="share-graph">Compartir</a>';
-	}
+function shareImage(i,m,s){
+	$.ajax(
+	{
+		url: 'fbshare.php', 
+		type: 'POST',
+		datatype: 'text',
+		data: { imgtosave : i }
+	})
+	.done(function(e){
+		if ( e === "-1" ) { 
+			log("FBShare error: something wrong happened uploading the image.");
+			s({ result : 'error', msg : 'FBShare: something wrong happened uploading the image.' });
+		} else {
+			var imgURL=e;
+			var msg=$('#'+m).val().trim();
+			FB.getLoginStatus(function(response) {
+			  if (response.status === 'connected') {
+			  	fbPost(msg,imgURL,s);
+			  }
+			  else {
+			    FB.login(function(){
+			    	fbPost(msg,imgURL,s);
+			    }, {scope: 'publish_actions'});
+			}});
+		}
+	});
+}
+// c - chart object
+// t - objeto que inicia de la accion compartir al recibir un click, href button etc. 
+// m - objeto del cual se va a tomar el texto del mensaje que va a tener la foto en FB
+// s - funcion de exito que se llama cuando se compartio el post
+function chartSetup(c,t,m,s,d){
+	debug = d;
+
 	google.visualization.events.addListener(
 		c, 'ready', 
 		function(){
-			$(t).insertAfter($("#"+d));
-			$('.share-graph').click(function(){
-				shareImage(c.getImageURI());
-				/*FB.ui({
-					method: 'share',
-					href: 'https://itros.net/sandbox/facebook-share/fbshare.php?id=436'
-				}, function(response){});*/
+			$('#'+t).click(function(){
+				shareImage(c.getImageURI(),m,s);
 			});
 		});
 }
 <?php
-	}
-}
-
-/*
-<head>
-
-<meta property="og:url" content="itros.net" />
-<meta property="og:type" content="website" />
-<meta property="og:image" content="https://itros.net/sandbox/facebook-share/grafico.png" />
-<meta property="og:image:type" content="image/png" />
-<meta property="og:image:width" content="204" />
-<meta property="og:image:height" content="153" />
-
-</head>
-<html>
-</html>
-*/
+}}
 ?>

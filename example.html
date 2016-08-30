@@ -1,0 +1,67 @@
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=us-ascii">
+<title></title>
+</head>
+<body>
+<div id="chart_div"></div>
+<input type="text" id="mensaje" size="30" value="Texto de la imagen...">
+<a href="#" id="compartir">Compartir en FB</a>
+
+
+<script src="https://code.jquery.com/jquery-1.12.4.min.js"></script>
+<script src="https://www.gstatic.com/charts/loader.js"></script>
+
+<script src="fbshare.php?js&appid=614167212077041"></script>
+
+<script>
+
+function compartido(e) {
+	console.log("Compartir dice: " + e.result);
+}
+
+var imgData;
+
+// Load the Visualization API and the corechart package.
+google.charts.load('current', {'packages':['corechart']});
+
+// Set a callback to run when the Google Visualization API is loaded.
+google.charts.setOnLoadCallback(drawChart);
+
+// Callback that creates and populates a data table,
+// instantiates the pie chart, passes in the data and
+// draws it.
+function drawChart() {
+  
+  var data = new google.visualization.DataTable();
+  data.addColumn('string', 'Topping');
+  data.addColumn('number', 'Slices');
+  data.addRows([
+    ['Mushrooms', 3],
+    ['Onions', 1],
+               ['Olives', 1],
+               ['Zucchini', 1],
+               ['Pepperoni', 2]
+               ]);
+
+  var options = {'title':'Cuanta pizza comi anoche?',
+                 'width':400,
+                 'height':300};
+
+  var chart = new google.visualization.PieChart(document.getElementById('chart_div'));
+  
+// chartsetup(
+// - chart object, 
+// - id del objeto que inicia de la accion compartir al recibir un click, href button etc. , 
+// - id del objeto del cual se va a tomar el texto del mensaje que va a tener la foto en FB,
+// - funcion de exito que se llama cuando se compartio el post
+// )
+  chartSetup(chart,'compartir','mensaje',compartido);
+  
+  chart.draw(data, options);
+  
+}
+
+</script>
+</body>
+</html>
