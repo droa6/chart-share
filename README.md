@@ -27,7 +27,7 @@ chartSetup(chart,'compartir','mensaje',compartido);
 [...]
 chart.draw(data, options);
 ```
-Funcion "chartsetup":
+Parametros de la funcion "chartsetup":
 - objeto del chart (variable de js), 
 - id del objeto que inicia de la accion compartir al recibir un click, href button etc. , 
 - id del objeto del cual se va a tomar el texto del mensaje que va a tener la foto en FB,
