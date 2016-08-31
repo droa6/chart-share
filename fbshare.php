@@ -116,6 +116,7 @@ function shareImage(i,m,s){
 // m - objeto del cual se va a tomar el texto del mensaje que va a tener la foto en FB
 // s - funcion de exito que se llama cuando se compartio el post
 function chartSetup(c,t,m,s){
+	fbconnected = false;
 	FB.getLoginStatus(function(response) {
 		fbconnected = (response && response.status == 'connected');
 	});
