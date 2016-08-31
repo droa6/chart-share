@@ -37,19 +37,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 	$data = default_value($_POST,"imgtosave","NOTDEF");
 	
 	if ( $data === "NOTDEF" ) {
-		$data = default_value($_POST,"imgtoremove","NOTDEF");
-		if ( $data === "NOTDEF" ) {
-			echo "";
-		} else {
-			$link_array = explode('/',$data);
-    		$fdata = end($link_array);
-			if(unlink($uploaddir . $fdata)){
-				//echo "Deleted " . $fdata;
-				echo "";
-			} else {
-				echo "-1";
-			}
-		}
+		echo "";
 	} else {
 		$rnd = generateRandomString();
 		$uploadfile = $uploaddir . $rnd . '.png';
@@ -57,7 +45,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 		if (file_put_contents($uploadfile, base64_decode($image[1]))) {
 		  echo str_replace("fbshare.php", "", "http://$_SERVER[HTTP_HOST]$_SERVER[REQUEST_URI]")."images/$rnd.png";
 		} else {
-		   echo "-1";
+			error_log("FBShare: Error creating the image on the server, file: $uploadfile.");
+		   	echo "-1";
 		}
 	}
 } else {
@@ -69,14 +58,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 		header('Content-type: text/javascript');
 		
 		if ($appid === "") {
-?>			log("FBShare error config: edit the appropiate configuration values."); <?php
+			error_log("FBShare error config: edit the appropiate configuration values.");
+			echo "console.log('FBShare, error in the config, missing app ID');";
+			exit -1;
 		}
 ?>
-/*
-var script = document.createElement('script');
-script.src = "base64min.js";
-document.getElementsByTagName('script')[0].parentNode.appendChild(script);
-*/
 window.fbAsyncInit = function() {
     FB.init({
       appId      : '<?php echo $appid; ?>',
@@ -92,12 +78,6 @@ js.src = "//connect.facebook.net/es_LA/sdk.js";
 fjs.parentNode.insertBefore(js, fjs);
 }(document, 'script', 'facebook-jssdk'));
 
-function log(t){
-	if ( debug ) {
-		console.log(t);
-	}
-}
-
 function fbPost(m,i,s){
 	FB.api('/me/photos', 'post', {
 		message:m,
@@ -105,25 +85,9 @@ function fbPost(m,i,s){
 	}, 
 	function(response){
 		if (!response || response.error) {
-			log('FBShare: Error sharing, ' + response.error.message);
 			s({ result : 'error', msg : 'FBShare: Error sharing, ' + response.error.message });
 		} else {
-			log('FBShare: Post done, ID#' + response.id);
 			s({ result : 'success', msg : 'FBShare: Post done, ID#' + response.id });
-			$.ajax(
-			{
-				url: 'fbshare.php', 
-				type: 'POST',
-				datatype: 'text',
-				data: { imgtoremove : i }
-			})
-			.done(function(e){
-					if ( e === "-1" ) { 
-						log("FBShare error: something wrong happened deleting the temp image.");
-					} else {
-						log("FBShare: temporary image removed, " + e);
-					}
-			});
 		}
 	});
 }
@@ -138,38 +102,38 @@ function shareImage(i,m,s){
 	})
 	.done(function(e){
 		if ( e === "-1" ) { 
-			log("FBShare error: something wrong happened uploading the image.");
 			s({ result : 'error', msg : 'FBShare: something wrong happened uploading the image.' });
 		} else {
 			var imgURL=e;
 			var msg=$('#'+m).val().trim();
-			FB.getLoginStatus(function(response) {
-			  if (response.status === 'connected') {
-			  	fbPost(msg,imgURL,s);
-			  }
-			  else {
-			    FB.login(function(){
-			    	fbPost(msg,imgURL,s);
-			    }, {scope: 'publish_actions'});
-			}});
+			fbPost(msg,imgURL,s);
 		}
 	});
 }
+
 // c - chart object
 // t - objeto que inicia de la accion compartir al recibir un click, href button etc. 
 // m - objeto del cual se va a tomar el texto del mensaje que va a tener la foto en FB
 // s - funcion de exito que se llama cuando se compartio el post
-function chartSetup(c,t,m,s,d){
-	debug = d;
-
+function chartSetup(c,t,m,s){
+	FB.getLoginStatus(function(response) {
+		fbconnected = (response && response.status == 'connected');
+	});
 	google.visualization.events.addListener(
 		c, 'ready', 
 		function(){
 			$('#'+t).click(function(){
-				shareImage(c.getImageURI(),m,s);
+					if (fbconnected) {
+						shareImage(c.getImageURI(),m,s);
+					} else {
+						FB.login(function(){
+							shareImage(c.getImageURI(),m,s);
+						}, {scope: 'publish_actions'});
+					}
 			});
-		});
+	});
 }
 <?php
-}}
+	}
+}
 ?>
