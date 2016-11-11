@@ -1,4 +1,5 @@
-# FBShare
+# Chart Share
+Utilidad para compartir graficos de Google Viz en Facebook o por email
 
 ### Uso
 
@@ -11,6 +12,7 @@ Agregue la porcion de javascript al HTML usando:
 ```
 Este FBAPPID es el id de su aplicacion de FB.
 Si no cuenta con una tiene que crear una en la consola de Developers de Facebook.
+Si no incluye un FBAPPID, solo se incluye la parte de js necesaria para compartir el grafico por correo electronico.
 
 Posterior a esto, para un HTML de ejemplo:
 ```html
