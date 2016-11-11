@@ -1,0 +1,66 @@
+
+    function send_email($to, $from, $name, $subject, $htmltext, $image) {
+        /*
+        $to      = "david.obandoarias@equifax.com, Jorge.UmanaSegura@equifax.com";
+        $from   = "david.obandoarias@equifax.com";
+        $name    = "David Obando";
+        $subject = "An inline image!"; 
+        $comment = "Llookout <b>Llary</b> it's <br> the <b>Ll</b>andllord!<br><br><img src='cid:imagen_adjunta_cid.png'><br>";
+        */
+
+        $To          = strip_tags($to);
+        $TextMessage = strip_tags(nl2br($htmltext),"<br>");
+        $HTMLMessage = nl2br($comment);
+        $FromName    = strip_tags($name);
+        $FromEmail   = strip_tags($from);
+        $Subject     = strip_tags($subject);
+
+        $boundary1   =rand(0,9)."-"
+            .rand(10000000000,9999999999)."-"
+            .rand(10000000000,9999999999)."=:"
+            .rand(10000,99999);
+        $boundary2   =rand(0,9)."-".rand(10000000000,9999999999)."-"
+            .rand(10000000000,9999999999)."=:"
+            .rand(10000,99999);
+/*
+        $filename1  = "./ejemplo.png"; //name of file on server with script
+        $handle     = fopen($filename1, 'rb'); 
+        $f_contents = fread($handle, filesize($filename1)); 
+        $attachment = chunk_split(base64_encode($f_contents));
+        fclose($handle); 
+*/
+        if ( isset($image) ) {
+            $attachment = $image;
+            $ftype       ="image/png";
+            $fname       ="imagen_adjunta_cid.png";
+        }
+        
+        $Headers = <<<AKAM
+From: $FromName <$FromEmail>
+Reply-To: $FromEmail
+MIME-Version: 1.0
+Content-Type: multipart/related; boundary="$boundary1"; type="text/html"
+AKAM;
+
+        $Body = <<<AKAM
+--$boundary1
+Content-Type: text/html; charset="US-ASCII"
+
+$f_contents
+<IMG SRC="cid:foo4atfoo1atbar.net" ALT="IETF logo">
+
+--$boundary1
+Content-Location: CID:somethingatelse ; this header is disregarded
+Content-ID: <foo4atfoo1atbar.net>
+Content-Type: image/png
+Content-Transfer-Encoding: BASE64
+
+$attachment
+
+AKAM;
+
+        // Send email
+        $ok=mail($To, $Subject, $Body, $Headers);
+        echo $ok?"<h1> Mail sent!</h1>":"<h1> Mail not sent!</h1>";
+    }
+    
