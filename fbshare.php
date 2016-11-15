@@ -58,10 +58,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 		header('Content-type: text/javascript');
 		
 		if ($appid === "") {
-			error_log("FBShare error config: edit the appropiate configuration values.");
-			echo "console.log('FBShare, error in the config, missing app ID');";
-			exit -1;
-		}
+			//error_log("FBShare error config: edit the appropiate configuration values.");
+			echo "console.log('FBShare not enabled, error in the config, missing app ID');";
+		} else {
 ?>
 window.fbAsyncInit = function() {
     FB.init({
@@ -78,63 +77,83 @@ js.src = "//connect.facebook.net/es_LA/sdk.js";
 fjs.parentNode.insertBefore(js, fjs);
 }(document, 'script', 'facebook-jssdk'));
 
-function fbPost(m,i,s){
+
+/*
+urlImg:
+message:
+success:
+*/
+function fbPost(urlImg,message,success){
 	FB.api('/me/photos', 'post', {
-		message:m,
-		url:i        
+		message:message,
+		url:urlImg        
 	}, 
 	function(response){
 		if (!response || response.error) {
-			s({ result : 'error', msg : 'FBShare: Error sharing, ' + response.error.message });
+			s({ result : 'error', msg : 'fbPost: Error compartiendo, ' + response.error.message });
 		} else {
-			s({ result : 'success', msg : 'FBShare: Post done, ID#' + response.id });
+			s({ result : 'success', msg : 'fbPost: Post completado, ID#' + response.id });
 		}
 	});
 }
 
-function shareImage(i,m,s){
+/*
+baseImg:
+message: element ID
+success:
+*/
+function fbUploadShare(baseImg,message,success){
 	$.ajax(
 	{
 		url: 'fbshare.php', 
 		type: 'POST',
 		datatype: 'text',
-		data: { imgtosave : i }
+		data: { imgtosave : baseImg }
 	})
 	.done(function(e){
 		if ( e === "-1" ) { 
-			s({ result : 'error', msg : 'FBShare: something wrong happened uploading the image.' });
+			s({ result : 'error', msg : 'fbUploadShare: something wrong happened uploading the image.' });
 		} else {
 			var imgURL=e;
-			var msg=$('#'+m).val().trim();
-			fbPost(msg,imgURL,s);
+			var msg=$('#'+message).val().trim();
+			fbPost(imgURL,msg,success);
 		}
 	});
 }
 
-// c - chart object
-// t - objeto que inicia de la accion compartir al recibir un click, href button etc. 
-// m - objeto del cual se va a tomar el texto del mensaje que va a tener la foto en FB
-// s - funcion de exito que se llama cuando se compartio el post
-function chartSetup(c,t,m,s){
+/*
+ chart - chart object
+ button - objeto que inicia de la accion compartir al recibir un click, href button etc. 
+ msg - objeto del cual se va a tomar el texto del mensaje que va a tener la foto en FB
+ success - funcion de exito que se llama cuando se compartio el post
+*/
+function fbShare(chart,button,msg,success){
 	fbconnected = false;
 	FB.getLoginStatus(function(response) {
 		fbconnected = (response && response.status == 'connected');
 	});
 	google.visualization.events.addListener(
-		c, 'ready', 
+		chart, 'ready', 
 		function(){
-			$('#'+t).click(function(){
+			$('#'+button).click(function(){
 					if (fbconnected) {
-						shareImage(c.getImageURI(),m,s);
+						fbUploadShare(chart.getImageURI(),msg,success);
 					} else {
 						FB.login(function(){
-							shareImage(c.getImageURI(),m,s);
+							fbUploadShare(chart.getImageURI(),msg,success);
 						}, {scope: 'publish_actions'});
 					}
 			});
 	});
 }
 <?php
-	}
+		} // fb share area
+// email share js
+// TODO
+// email share end   
+?>
+    
+<?php
+	} // js script end
 }
 ?>
